@@ -71,6 +71,12 @@ export function channelSurfaceUrl(webUiPublicUrl: string | undefined, channelId:
   return scopeSurfaceUrl(webUiPublicUrl, `channel:${channelId}`);
 }
 
+export function runWatchUrl(webUiPublicUrl: string | undefined, runId: string): string | undefined {
+  const base = (webUiPublicUrl ?? "").trim().replace(/\/+$/, "");
+  if (!base || !runId) return undefined;
+  return `${base}/watch.html?run=${encodeURIComponent(runId)}`;
+}
+
 export function channelWelcomeMessage(surfaceUrl: string | undefined): string {
   if (!surfaceUrl) {
     return "QM here, ready to assist.";

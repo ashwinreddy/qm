@@ -122,6 +122,7 @@ export {
   botIdentityArgs,
   slackReplyArgs,
   channelSurfaceUrl,
+  runWatchUrl,
   channelWelcomeMessage,
   surfaceHeaderText,
   headerUpdate,

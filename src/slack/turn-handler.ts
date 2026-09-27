@@ -48,6 +48,7 @@ import {
   postThenAckRunDelivery,
   type PostMessageArgs,
   postWithVerify,
+  runWatchUrl,
   processInboundFiles,
   safeChunks,
   SLACK_POST_SPLIT_LIMIT,
@@ -155,6 +156,7 @@ export function createTurnHandler(deps: {
   markEvent?: () => void;
   botToken: string;
   trustedFileHost?: string;
+  webUiPublicUrl?: string;
   ensureHeader?: (
     client: SurfaceHeaderClient,
     channel: string,
@@ -593,6 +595,13 @@ export function createTurnHandler(deps: {
             accepted = true;
             inc.ackGate?.persisted();
             await moveTaskAck(runId, inc.ts, true);
+            if (inc.kind !== "dm") {
+              const watchUrl = runWatchUrl(deps.webUiPublicUrl, runId);
+              if (watchUrl)
+                await postReply(`:eyes: <${watchUrl}|Watch this run live>`, undefined, `watch:${runId}`).catch(
+                  swallowAs("slack: post watch link", undefined),
+                );
+            }
           },
           // Folded into a live run: the envelope is durably accepted just the same, but the run
           // stays pinned to its own handler — claiming it here would unpin it on the way out.

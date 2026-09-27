@@ -935,6 +935,21 @@ async function serveAppEditHtml(req: IncomingMessage, res: ServerResponse, url: 
   return true;
 }
 
+async function serveWatchHtml(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  let html: string;
+  if (vite) {
+    const raw = readFileSync(join(ROOT, "watch.html"), "utf8");
+    html = await vite.transformIndexHtml(req.url ?? "/watch.html", raw);
+  } else {
+    const filePath = join(DIST, "watch.html");
+    if (!existsSync(filePath)) return false;
+    html = readFileSync(filePath, "utf8");
+  }
+  const headers = withSecurityHeaders({ "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
+  sendBuffered(res, 200, headers, await brandIndexHtml(html));
+  return true;
+}
+
 let vite: ViteDevServer | undefined;
 
 async function createVite(server: Server): Promise<ViteDevServer | undefined> {
@@ -3260,6 +3275,7 @@ const routeRequest = async (req: IncomingMessage, res: ServerResponse) => {
   }
 
   if (method === "GET" && path === "/app-edit" && (await serveAppEditHtml(req, res, url))) return;
+  if (method === "GET" && path === "/watch.html" && (await serveWatchHtml(req, res))) return;
 
   if (method === "GET") {
     if (path.startsWith("/assets/")) return await serveStatic(res, path);

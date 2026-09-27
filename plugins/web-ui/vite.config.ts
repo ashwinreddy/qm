@@ -73,7 +73,7 @@ export default defineConfig({
   },
   build: {
     outDir: "dist-web",
-    rollupOptions: { input: { main: here("index.html"), shared: here("shared.html") } },
+    rollupOptions: { input: { main: here("index.html"), shared: here("shared.html"), watch: here("watch.html") } },
     emptyOutDir: true,
   },
   server: {

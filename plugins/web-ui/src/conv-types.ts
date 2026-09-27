@@ -64,6 +64,7 @@ interface ChatState {
 export interface ChatSurface {
   state: ChatState;
   hasLiveRun(): boolean;
+  liveRunId(): string | null;
   signalLiveRun(
     kind: "abort" | "steer",
     text?: string,

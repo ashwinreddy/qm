@@ -3095,6 +3095,7 @@ export function createChatSurface(
   return {
     state: chatState,
     hasLiveRun: () => hasLiveRun(runSlot),
+    liveRunId: () => runSlot.runId,
     signalLiveRun: (kind, text, queuedRunId) =>
       signalLiveRun(
         runSlot,

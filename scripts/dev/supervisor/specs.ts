@@ -42,6 +42,7 @@ export function buildChildSpecs(i: SpecInputs): ChildSpec[] {
         ...(i.databaseUrl ? { DATABASE_URL: i.databaseUrl } : {}),
         ...(i.adminGrantsSeed ? { ADMIN_GRANTS: i.adminGrantsSeed } : {}),
         PUBLIC_WEB_URL: i.web === false ? "" : `http://localhost:${i.ports.portal}`,
+        WEB_UI_PUBLIC_URL: i.web === false ? "" : `http://localhost:${i.ports.portal}`,
         ...(i.slack
           ? {
               SLACK_BOT_TOKEN: i.slack.botToken,

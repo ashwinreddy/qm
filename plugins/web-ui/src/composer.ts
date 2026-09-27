@@ -13,7 +13,7 @@ import { FolderDropError, folderToZipFile, isFolderReadError, splitDropItems, ty
 import { html, nothing, render, type TemplateResult } from "lit";
 import { live } from "lit/directives/live.js";
 import { repeat } from "lit/directives/repeat.js";
-import { ArrowUp, Box, CornerDownRight, FileText, Paperclip, Square, X } from "lucide";
+import { ArrowUp, Box, CornerDownRight, Eye, FileText, Paperclip, Square, X } from "lucide";
 import {
   api,
   ApiError,
@@ -28,6 +28,7 @@ import {
   tooManyFilesNote,
   uploadAttachments,
   userSendMessage,
+  withBase,
   withdrawRun,
   type ApprovalDecision,
   type CoreAttachment,
@@ -790,7 +791,20 @@ export function createComposerSurface(ctx: ConvCtx, options: ComposerOptions = {
         ${icon(ArrowUp, 16)}
       </button>`;
     }
+    const liveRunId = ctx.chat.liveRunId();
     return html`
+      ${liveRunId
+        ? html`<a
+            class="stop-btn"
+            href=${withBase(`/watch.html?run=${encodeURIComponent(liveRunId)}`)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Watch this run"
+            ${tip("Watch this run")}
+          >
+            ${icon(Eye, 16)}
+          </a>`
+        : nothing}
       <button class="stop-btn" type="button" aria-label="Stop" ${tip("Stop")} @click=${() => stopStreaming(agent)}>
         ${icon(Square, 16)}
       </button>
