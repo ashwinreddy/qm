@@ -258,3 +258,23 @@ test("a quarantine-release card offers only Allow once and Deny, with the screen
   assert.match(rendered, /instruction in untrusted data/);
   assert.match(rendered, /Blocked content preview/);
 });
+
+test("recoveredApprovalContext replies in the conversation a credential resume came from, not the DM card", () => {
+  const ctx = recoveredApprovalContext(
+    {
+      command: "stripe charges list",
+      request: {
+        surface: "secret-drop",
+        actor: { externalId: "U_A" },
+        conversation: { kind: "channel", threadRef: "channel:C1:1700.3" },
+        text: "resume",
+        triggered: true,
+        triggerDestination: { type: "slack", target: "C1:1700.3" },
+      },
+    },
+    { channel: "D_A" },
+  );
+  assert.equal(ctx?.channel, "C1");
+  assert.equal(ctx?.replyThreadTs, "1700.3");
+  assert.equal(ctx?.approvalChannel, "D_A");
+});

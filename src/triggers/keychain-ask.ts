@@ -76,6 +76,7 @@ export async function fireAskResolution(
   )
     throw new Error("credential approval resume is waiting for the original conversation to become idle");
   if (outcome.ran && outcome.status === "ok") return outcome;
+  if (outcome.ran && outcome.status === "pending_approval" && !cronId) return outcome;
   if (cronId && (!outcome.ran || outcome.status === "refused")) return outcome;
   if (!outcome.ran && !outcome.authzFailed) {
     const cur = await deps.getAsk?.(ask.id);
@@ -138,7 +139,7 @@ export async function fireDropResolution(deps: TriggerDeps, drop: DropResolution
     ...(drop.destination ? { destination: drop.destination } : {}),
     ...(drop.threadRef ? { threadRef: drop.threadRef } : {}),
   });
-  if (outcome.ran && outcome.status === "ok") return outcome;
+  if (outcome.ran && (outcome.status === "ok" || outcome.status === "pending_approval")) return outcome;
   if (drop.destination && (await destinationVisible(deps, drop.ownerId, drop.destination))) {
     await deps.deliveries.enqueue({
       destination: withWebTranscriptText(drop.destination),

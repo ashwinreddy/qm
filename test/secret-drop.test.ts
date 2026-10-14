@@ -149,7 +149,7 @@ describe("fireDropResolution", () => {
       deliveries,
       idempotency: createIdempotencyStore(createMemoryMap<IdempotencyRecord>()),
       identity: createIdentityService(createMemoryMap()),
-      run: async () => ({ status: "pending_approval" }) as TurnResult,
+      run: async () => ({ status: "refused" }) as TurnResult,
     };
     const destination = { type: "slack", target: "C1", audienceScopeId: scopeId("channel", "C1") } as const;
     await fireDropResolution(deps, {
@@ -166,6 +166,28 @@ describe("fireDropResolution", () => {
     const fb = (await deliveries.pending("slack")).filter((d) => d.idempotencyKey === "drop:dropF:fallback");
     assert.equal(fb.length, 1, "the conversation hears the key arrived even when the resume turn didn't run");
     assert.match(fb[0]!.text, /saved to the keychain/);
+  });
+
+  it("a resume that pauses for approval posts nothing beyond its approval card", async () => {
+    const deliveries = createDeliveryStore();
+    const deps = {
+      deliveries,
+      idempotency: createIdempotencyStore(createMemoryMap<IdempotencyRecord>()),
+      identity: createIdentityService(createMemoryMap()),
+      run: async () => ({ status: "pending_approval" }) as TurnResult,
+    };
+    await fireDropResolution(deps, {
+      id: "dropW",
+      ownerId: "U_A",
+      service: "stripe",
+      purpose: "p",
+      audienceScopeId: scopeId("channel", "C1"),
+      destination: { type: "slack", target: "C1", audienceScopeId: scopeId("channel", "C1") },
+      grantId: "g1",
+      credentialHandle: "kc_stripe",
+      granted: true,
+    });
+    assert.deepEqual(await deliveries.pending("slack"), []);
   });
 
   it("with sibling drops still pending: the wake fires (with its grant) but says what's outstanding instead of ordering a resume", async () => {

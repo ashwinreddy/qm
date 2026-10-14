@@ -121,6 +121,7 @@ export function recoveredApprovalContext(
         actor?: { externalId?: unknown };
         conversation?: { kind?: unknown };
         deliveryTarget?: unknown;
+        triggerDestination?: { type?: unknown; target?: unknown };
       })
     | undefined;
   if (!req || typeof req.actor?.externalId !== "string" || typeof req.text !== "string") return null;
@@ -137,10 +138,15 @@ export function recoveredApprovalContext(
     clientSentAt: _clientSentAt,
     ...turn
   } = req;
-  const origin =
-    typeof req.deliveryTarget === "string" && req.deliveryTarget
-      ? parseDeliveryTarget(req.deliveryTarget)
-      : { channel: click.channel, ...(click.threadTs ? { threadTs: click.threadTs } : {}) };
+  const resumed = req.triggerDestination;
+  const fromDeliveryTarget =
+    typeof req.deliveryTarget === "string" && req.deliveryTarget ? parseDeliveryTarget(req.deliveryTarget) : undefined;
+  const fromResumedConversation =
+    resumed?.type === "slack" && typeof resumed.target === "string" && resumed.target
+      ? parseDeliveryTarget(resumed.target)
+      : undefined;
+  const origin: { channel: string; threadTs?: string } = fromDeliveryTarget ??
+    fromResumedConversation ?? { channel: click.channel, ...(click.threadTs ? { threadTs: click.threadTs } : {}) };
   return {
     requesterId: req.actor.externalId,
     channel: origin.channel,
