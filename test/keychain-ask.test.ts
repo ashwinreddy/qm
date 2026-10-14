@@ -502,6 +502,11 @@ test("fireAskResolution: a turn that fires but doesn't land falls back to a plai
   const ok = mkDeps(async () => ({ status: "ok", reply: "done" }) as TurnResult);
   await fireAskResolution(ok, ask);
   assert.deepEqual(await texts(ok), ["done"], "just the turn's reply, no fallback");
+
+  const paused = { ...ask, id: "fa11bacc2222" };
+  const waiting = mkDeps(async () => ({ status: "pending_approval" }) as TurnResult, paused);
+  await fireAskResolution(waiting, paused);
+  assert.deepEqual(await texts(waiting), [], "the approval card is the only message while the resume waits");
 });
 
 test("manifest: the requester-side ledger names no ask ids or purposes, and asks go through one route", async () => {

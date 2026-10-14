@@ -3,7 +3,10 @@ import test from "node:test";
 import { createApprovalStore } from "../src/core/approval-store.ts";
 import { createMemoryMap } from "../src/persistence/durable-map.ts";
 import { createDeliveryStore } from "../src/delivery/delivery-store.ts";
-import type { PendingApprovalRecord } from "../src/types.ts";
+import { replayableRequest } from "../src/core/orchestrator/turn-helpers.ts";
+import type { OrchestratorInput } from "../src/core/orchestrator/types.ts";
+import { resolveTurnOrigin } from "../src/core/turn-origin.ts";
+import { scopeId, type Destination, type PendingApprovalRecord } from "../src/types.ts";
 
 function record(threadRef: string, createdAt = 1): PendingApprovalRecord {
   return {
@@ -110,4 +113,70 @@ test("approvals requested from a Slack DM thread are delivered into that thread"
   channel.request!.deliveryTarget = "C1:1700.2";
   await approvals.put("A2", channel);
   assert.equal((await deliveries.pending("principal"))[0]?.destination.threadTs, undefined);
+});
+
+function resumeRecord(surface: string, triggerDestination?: Destination): PendingApprovalRecord {
+  const approval = record("channel:C1:1700.3");
+  approval.request = {
+    ...approval.request!,
+    surface,
+    actor: { externalId: "U_A" },
+    conversation: { kind: "channel", channelRef: "C1", threadRef: "channel:C1:1700.3", audience: [] },
+    triggered: true,
+    ...(triggerDestination ? { triggerDestination } : {}),
+  };
+  return approval;
+}
+
+const slackThread: Destination = {
+  type: "slack",
+  target: "C1:1700.3",
+  audienceScopeId: scopeId("channel", "C1"),
+};
+
+for (const surface of ["secret-drop", "keychain-ask"]) {
+  test(`a ${surface} resume in a Slack conversation delivers its approval to the requester`, async () => {
+    const deliveries = createDeliveryStore();
+    const approvals = createApprovalStore(createMemoryMap<PendingApprovalRecord>(), deliveries);
+    await approvals.put("A1", resumeRecord(surface, slackThread));
+    const [delivery] = await deliveries.pending("principal");
+    assert.equal(delivery?.destination.commandApprovalId, "A1");
+    assert.equal(delivery?.destination.target, "U_A");
+  });
+}
+
+test("a secret-drop resume in a web conversation stays on web polling", async () => {
+  for (const destination of [undefined, { type: "web", target: "web:U_A:1" }]) {
+    const deliveries = createDeliveryStore();
+    const approvals = createApprovalStore(createMemoryMap<PendingApprovalRecord>(), deliveries);
+    await approvals.put("A1", resumeRecord("secret-drop", destination));
+    await approvals.deliverPending();
+    assert.deepEqual(await deliveries.pending("principal"), []);
+  }
+});
+
+for (const surface of ["cron", "loop", "monitor"]) {
+  test(`a ${surface} run aimed at Slack still fails closed without an approval card`, async () => {
+    const deliveries = createDeliveryStore();
+    const approvals = createApprovalStore(createMemoryMap<PendingApprovalRecord>(), deliveries);
+    await approvals.put("A1", resumeRecord(surface, slackThread));
+    await approvals.deliverPending();
+    assert.deepEqual(await deliveries.pending("principal"), []);
+  });
+}
+
+test("a keychain-ask resume for a cron's request sends no approval card", async () => {
+  const deliveries = createDeliveryStore();
+  const approvals = createApprovalStore(createMemoryMap<PendingApprovalRecord>(), deliveries);
+  const approval = resumeRecord("keychain-ask", slackThread);
+  approval.request!.conversation = { kind: "dm", threadRef: "agent:main:cron:c1" };
+  await approvals.put("A1", approval);
+  await approvals.deliverPending();
+  assert.deepEqual(await deliveries.pending("principal"), []);
+});
+
+test("a resumed turn's Slack destination is saved on its approval record", () => {
+  const request = resumeRecord("secret-drop", slackThread).request!;
+  const saved = replayableRequest({ ...request, origin: resolveTurnOrigin(request) } as unknown as OrchestratorInput);
+  assert.deepEqual(saved.triggerDestination, slackThread);
 });
